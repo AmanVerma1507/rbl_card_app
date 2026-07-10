@@ -56,28 +56,29 @@ class _CardInfoContent extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Card name
           Text(
             'The RBL ${card.name} Credit Card',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.3,
-                ),
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           // Brand logos row
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _RblBankBadge(),
               const SizedBox(width: 10),
               _VisaBadge(),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 25),
 
           // Fee stats row
           _FeeStatsRow(card: card),
@@ -95,7 +96,7 @@ class _RblBankBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
+        color: AppColors.textOnCard,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppColors.divider),
       ),
@@ -107,7 +108,7 @@ class _RblBankBadge extends StatelessWidget {
             width: 16,
             height: 16,
             decoration: const BoxDecoration(
-              color: AppColors.cardGoldPrimary,
+              color: AppColors.accentBlue,
               shape: BoxShape.circle,
             ),
             child: const Center(
@@ -124,10 +125,18 @@ class _RblBankBadge extends StatelessWidget {
           ),
           const SizedBox(width: 5),
           Text(
-            'RBL Bank',
+            'RBL',
             style: GoogleFonts.inter(
-              color: AppColors.textPrimary,
-              fontSize: 11,
+              color: AppColors.accentBlue,
+              fontSize: 8,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            ' Bank',
+            style: GoogleFonts.inter(
+              color: AppColors.accentRed,
+              fontSize: 8,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -143,25 +152,20 @@ class _VisaBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.divider),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      // decoration: BoxDecoration(
+      //   color: AppColors.surfaceElevated,
+      //   borderRadius: BorderRadius.circular(8),
+      //   border: Border.all(color: AppColors.divider),
+      // ),
       child: Text(
         'VISA',
         style: GoogleFonts.inter(
-          color: const Color(0xFF1A1F71),
-          fontSize: 12,
+          color: const Color.fromARGB(255, 248, 248, 248),
+          fontSize: 13,
           fontWeight: FontWeight.w900,
           letterSpacing: 1.5,
-          shadows: const [
-            Shadow(
-              color: Color(0xFF1A1F71),
-              blurRadius: 0,
-            )
-          ],
+          shadows: const [Shadow(color: Color(0xFF1A1F71), blurRadius: 0)],
         ),
       ),
     );
@@ -186,10 +190,7 @@ class _FeeStatsRow extends StatelessWidget {
       child: IntrinsicHeight(
         child: Row(
           children: [
-            _FeeStat(
-              value: '₹${card.annualFee.toInt()}',
-              label: 'Annual Fee',
-            ),
+            _FeeStat(value: '₹${card.annualFee.toInt()}', label: 'Annual Fee'),
             const VerticalDivider(
               color: AppColors.divider,
               width: 1,
@@ -235,8 +236,8 @@ class _FeeStat extends StatelessWidget {
             Text(
               value,
               style: GoogleFonts.inter(
-                color: AppColors.textPrimary,
-                fontSize: 18,
+                color: AppColors.cardGoldSecondary.withOpacity(0.8),
+                fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -244,8 +245,8 @@ class _FeeStat extends StatelessWidget {
             Text(
               label,
               style: GoogleFonts.inter(
-                color: AppColors.textSecondary,
-                fontSize: 10,
+                color: AppColors.textPrimary.withOpacity(0.9),
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
