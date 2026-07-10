@@ -12,19 +12,27 @@ import '../widgets/cashback_benefits_section.dart';
 import '../widgets/get_card_cta_button.dart';
 import '../widgets/offers_section.dart';
 
-/// Root page for the RBL Card Home (Card Offers) screen.
+/// Root page for the RBL Card Home (Credit Card Offers) screen.
 ///
-/// Layout (top → bottom, scrollable):
-/// 1. App bar  — "Credit Card Offers" title + back arrow
-/// 2. Card carousel — parallax PageView
-/// 3. Dot indicators — animated pill dots
-/// 4. Card details   — name, RBL + VISA logos, ₹0 fee stats
-/// 5. Cashback benefits — 3 benefit rows (per selected card)
-/// 6. Brand Offers   — horizontal scrollable large image cards
-/// 7. Selected Offers — 2-column offer grid
+/// Scroll animation (VERIFIED against reference video, frame-by-frame at
+/// 0.1s resolution — see notes below):
 ///
-/// Sticky overlay (always visible):
-/// 8. "Get Your Card" amber/gold CTA button
+/// • The card carousel does **NOT** scale/shrink while scrolling. Comparing
+///   the card's left/right edge x-position at t=0.80s (fully visible) vs
+///   t=1.30s (mid-scroll) shows identical width — only the TOP portion of
+///   the card gets progressively clipped away behind the pinned
+///   [SliverAppBar]. This is plain scroll-under-pinned-header behavior,
+///   NOT a Transform.scale effect.
+/// • The card is therefore a normal (non-persistent, non-shrinking) sliver
+///   that scrolls away like any other list item once the user scrolls past
+///   it — it does not stay pinned at a reduced size.
+/// • The scale/parallax effect DOES exist, but only on the **horizontal**
+///   card-to-card swipe inside [CardCarouselConnected] (verified at
+///   t=10.20–10.30s: the outgoing/incoming side card is visibly smaller
+///   than the centered card during the swipe gesture). That animation
+///   belongs inside the carousel widget's PageView (via viewportFraction +
+///   a scale Transform driven by page scroll offset) — it is unrelated to
+///   this page's vertical scroll and must not be reproduced here.
 class CardHomePage extends StatefulWidget {
   const CardHomePage({super.key});
 
@@ -33,14 +41,6 @@ class CardHomePage extends StatefulWidget {
 }
 
 class _CardHomePageState extends State<CardHomePage> {
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -50,10 +50,10 @@ class _CardHomePageState extends State<CardHomePage> {
         extendBody: true,
         body: Stack(
           children: [
-            // ── Scrollable content ───────────────────────────────
-            _ScrollBody(scrollController: _scrollController),
+            // ── Main scrollable body ─────────────────────────────
+            const _ScrollBody(),
 
-            // ── Sticky CTA at bottom ─────────────────────────────
+            // ── Sticky "Get Your Card" CTA at bottom ─────────────
             const Positioned(
               bottom: 0,
               left: 0,
@@ -68,13 +68,12 @@ class _CardHomePageState extends State<CardHomePage> {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Scrollable body
+// Scrollable body — card scrolls away normally under the pinned app bar
+// (no shrink/scale delegate — see class doc above for why).
 // ────────────────────────────────────────────────────────────────────────────
 
 class _ScrollBody extends StatelessWidget {
-  const _ScrollBody({required this.scrollController});
-
-  final ScrollController scrollController;
+  const _ScrollBody();
 
   @override
   Widget build(BuildContext context) {
@@ -83,51 +82,52 @@ class _ScrollBody extends StatelessWidget {
           (prev is CardCarouselLoading && curr is CardCarouselLoaded) ||
           (prev is CardCarouselInitial && curr is CardCarouselLoading),
       builder: (context, state) {
+        if (state is CardCarouselLoading) {
+          return const Center(child: _LoadingView());
+        }
+        if (state is CardCarouselError) {
+          return Center(child: _ErrorView(message: state.message));
+        }
+
         return CustomScrollView(
-          controller: scrollController,
           physics: const BouncingScrollPhysics(),
           slivers: [
             // ── App bar ──────────────────────────────────────────
+            // Pinned + opaque background — this is what actually clips the
+            // card as it scrolls underneath, matching the video.
             SliverAppBar(
-              pinned: false,
-              floating: true,
+              toolbarHeight: 100,
+              pinned: true,
               backgroundColor: AppColors.background,
+              elevation: 0,
               leading: const _BackButton(),
               title: const _AppBarTitle(),
               centerTitle: true,
               titleSpacing: 0,
             ),
 
-            // ── Loading / Error ──────────────────────────────────
-            if (state is CardCarouselLoading)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: _LoadingView(),
-              )
-            else if (state is CardCarouselError)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: _ErrorView(message: state.message),
-              )
-            else ...[
-              // ── Card carousel ────────────────────────────────
-              const SliverToBoxAdapter(child: CardCarouselConnected()),
+            // ── Card carousel (plain sliver — scrolls away naturally) ──
+            // RepaintBoundary isolates the carousel's own internal
+            // horizontal-swipe animation from repainting the rest of the
+            // scroll view on every frame.
+            const SliverToBoxAdapter(
+              child: RepaintBoundary(child: CardCarouselConnected()),
+            ),
 
-              // ── Dot indicators ───────────────────────────────
-              const SliverToBoxAdapter(child: CardDotIndicator()),
+            // ── Dot page indicators ──────────────────────────────
+            const SliverToBoxAdapter(child: CardDotIndicator()),
 
-              // ── Card name + logos + fee stats ────────────────
-              const SliverToBoxAdapter(child: CardInfoPanel()),
+            // ── Card name + logos + fee stats ────────────────────
+            const SliverToBoxAdapter(child: CardInfoPanel()),
 
-              // ── Cashback benefit rows ────────────────────────
-              const SliverToBoxAdapter(child: CashbackBenefitsSection()),
+            // ── Cashback benefit rows ────────────────────────────
+            const SliverToBoxAdapter(child: CashbackBenefitsSection()),
 
-              // ── Brand Offers + Selected Offers ───────────────
-              const SliverToBoxAdapter(child: OffersSection()),
+            // ── Brand Offers + Selected Offers ───────────────────
+            const SliverToBoxAdapter(child: OffersSection()),
 
-              // ── Bottom padding to clear CTA button ──────────
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
-            ],
+            // ── Bottom padding to clear sticky CTA ───────────────
+            const SliverToBoxAdapter(child: SizedBox(height: 110)),
           ],
         );
       },
@@ -169,7 +169,7 @@ class _BackButton extends StatelessWidget {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Loading / Error states
+// Loading / Error
 // ────────────────────────────────────────────────────────────────────────────
 
 class _LoadingView extends StatelessWidget {
@@ -177,26 +177,25 @@ class _LoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(
-            width: 32,
-            height: 32,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor:
-                  AlwaysStoppedAnimation<Color>(AppColors.cardGoldPrimary),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const SizedBox(
+          width: 32,
+          height: 32,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              AppColors.cardGoldPrimary,
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Loading your cards…',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Loading your cards…',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ],
     );
   }
 }
@@ -208,30 +207,28 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              size: 48,
-              color: AppColors.accentRed,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Something went wrong',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 48,
+            color: AppColors.accentRed,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Something went wrong',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
