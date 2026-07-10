@@ -1,0 +1,37 @@
+name: rbl_card_home
+description: "RBL Bank Card Home Screen — CRED-style card dashboard with Clean Architecture + BLoC."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_bloc: ^9.1.1
+  equatable: ^2.0.7
+
+  # Dependency injection
+  get_it: ^8.0.3
+
+  # Localisation / formatting
+  intl: ^0.20.2
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/
