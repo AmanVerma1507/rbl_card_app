@@ -96,7 +96,6 @@ class _ScrollBody extends StatelessWidget {
             // Pinned + opaque background — this is what actually clips the
             // card as it scrolls underneath, matching the video.
             SliverAppBar(
-              toolbarHeight: 100,
               pinned: true,
               backgroundColor: AppColors.background,
               elevation: 0,

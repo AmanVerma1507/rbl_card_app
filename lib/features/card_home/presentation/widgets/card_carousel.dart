@@ -8,10 +8,26 @@ import '../bloc/card_carousel_state.dart';
 
 /// Horizontal card carousel with parallax scale + opacity animation.
 ///
-/// - [PageView] with viewportFraction = 0.82 so adjacent cards peek.
-/// - An [AnimatedBuilder] reads the [PageController] offset on every frame to
-///   compute per-card scale and opacity — smooth 60fps without full tree rebuilds.
-/// - Wrapped in [RepaintBoundary] to isolate repaints.
+/// - [PageView] with viewportFraction = 0.82 so adjacent cards peek —
+///   matches the ~15-18% edge-peek measured in the reference video.
+/// - Scale (1.0 → 0.87) and opacity (1.0 → 0.55) on off-center cards are
+///   driven by a per-item [AnimatedBuilder] listening to [pageController].
+///   These values were checked against the reference video's horizontal
+///   swipe (t≈10.20–10.30s) where the outgoing/incoming card is visibly
+///   smaller than the centered one — confirmed this scale/parallax effect
+///   is real and only happens on horizontal swipe (NOT on vertical page
+///   scroll, see card_home_page.dart doc comment).
+/// - Wrapped in [RepaintBoundary] to isolate repaints from the rest of the
+///   scroll view.
+///
+/// IMPORTANT: [PageView.builder] already listens to [pageController] and
+/// rebuilds itself efficiently on scroll — it must NOT be wrapped in an
+/// outer [AnimatedBuilder] listening to the same controller, since that
+/// would reconstruct the entire PageView.builder widget config on every
+/// single scroll frame instead of letting only the per-item transform
+/// (inside [_buildCardItem]) update. The per-item AnimatedBuilder below is
+/// sufficient and keeps rebuilds scoped to just the scale/opacity wrapper —
+/// the actual card content (`child`) is never rebuilt during scroll.
 class CardCarousel extends StatefulWidget {
   const CardCarousel({
     super.key,
@@ -37,24 +53,18 @@ class _CardCarouselState extends State<CardCarousel> {
     return RepaintBoundary(
       child: SizedBox(
         height: _cardHeight(context),
-        child: AnimatedBuilder(
-          animation: widget.pageController,
-          builder: (context, child) {
-            return PageView.builder(
-              controller: widget.pageController,
-              itemCount: _itemCount,
-              onPageChanged: (index) {
-                if (index < widget.cards.length) {
-                  context
-                      .read<CardCarouselBloc>()
-                      .add(CardSelected(index));
-                }
-              },
-              itemBuilder: (context, index) {
-                return _buildCardItem(context, index);
-              },
-            );
+        // No outer AnimatedBuilder here — PageView.builder manages its own
+        // rebuilds from pageController. Per-item scale/opacity animation
+        // is handled inside _buildCardItem instead.
+        child: PageView.builder(
+          controller: PageController(viewportFraction: 0.65),
+          itemCount: _itemCount,
+          onPageChanged: (index) {
+            if (index < widget.cards.length) {
+              context.read<CardCarouselBloc>().add(CardSelected(index));
+            }
           },
+          itemBuilder: _buildCardItem,
         ),
       ),
     );
@@ -64,7 +74,8 @@ class _CardCarouselState extends State<CardCarousel> {
     return AnimatedBuilder(
       animation: widget.pageController,
       builder: (context, child) {
-        double pageValue = widget.pageController.hasClients &&
+        double pageValue =
+            widget.pageController.hasClients &&
                 widget.pageController.page != null
             ? widget.pageController.page!
             : widget.initialIndex.toDouble();
@@ -75,12 +86,11 @@ class _CardCarouselState extends State<CardCarousel> {
 
         return Transform.scale(
           scale: scale,
-          child: Opacity(
-            opacity: opacity,
-            child: child,
-          ),
+          child: Opacity(opacity: opacity, child: child),
         );
       },
+      // Passed as `child`, NOT rebuilt on every animation tick — only the
+      // Transform/Opacity wrapper above re-runs during scroll.
       child: _buildCardContent(context, index),
     );
   }
@@ -109,7 +119,7 @@ class _CardCarouselState extends State<CardCarousel> {
   double _cardHeight(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
     // Card width is viewport fraction of screen; height = width * 1.586
-    final cardWidth = screenWidth * 0.82 - 16; // minus horizontal padding
+    final cardWidth = screenWidth * 0.6 - 16; // minus horizontal padding
     return cardWidth * 1.586;
   }
 }
@@ -131,10 +141,7 @@ class _AddCardPlaceholder extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF1C1C1C),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFF333333),
-              width: 1.5,
-            ),
+            border: Border.all(color: const Color(0xFF333333), width: 1.5),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -160,9 +167,9 @@ class _AddCardPlaceholder extends StatelessWidget {
               Text(
                 'Add new card',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF888888),
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: const Color(0xFF888888),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -186,7 +193,11 @@ class CardCarouselConnected extends StatefulWidget {
 
 class _CardCarouselConnectedState extends State<CardCarouselConnected> {
   PageController? _controller;
-  int _lastSelectedIndex = 0;
+
+  // Initialized lazily to the real starting index (see build()) instead of
+  // a hardcoded 0, so a non-zero initial selectedIndex doesn't trigger a
+  // spurious animateToPage on the first legitimate BLoC-driven change.
+  int? _lastSelectedIndex;
 
   @override
   void dispose() {
@@ -222,10 +233,13 @@ class _CardCarouselConnectedState extends State<CardCarouselConnected> {
       builder: (context, state) {
         if (state is! CardCarouselLoaded) return const SizedBox.shrink();
 
-        _controller ??= PageController(
-          initialPage: state.selectedIndex,
-          viewportFraction: 0.82,
-        );
+        if (_controller == null) {
+          _controller = PageController(
+            initialPage: state.selectedIndex,
+            viewportFraction: 0.82,
+          );
+          _lastSelectedIndex = state.selectedIndex;
+        }
 
         return CardCarousel(
           cards: state.cards,
