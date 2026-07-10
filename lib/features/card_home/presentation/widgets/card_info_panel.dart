@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/currency_formatter.dart';
-import '../../domain/entities/card_bill_info.dart';
 import '../../domain/entities/credit_card.dart';
 import '../bloc/card_carousel_bloc.dart';
 import '../bloc/card_carousel_state.dart';
 
-/// Dynamic content panel that changes with the selected card.
+/// Card details panel shown below the carousel.
 ///
-/// Uses [AnimatedSwitcher] for cross-fade transitions when the card changes.
-/// [BlocSelector] scopes rebuilds to only fire when [selectedIndex] changes.
+/// Displays (per selected card, with AnimatedSwitcher cross-fade):
+///  • Card display name  — "The RBL {name} Credit Card"
+///  • Brand logos row   — "RBL Bank" + "VISA"
+///  • Fee stats row     — Annual Fee | Joining Fee | Hidden Charges
 class CardInfoPanel extends StatelessWidget {
   const CardInfoPanel({super.key});
 
@@ -22,21 +22,19 @@ class CardInfoPanel extends StatelessWidget {
           state is CardCarouselLoaded ? state.selectedCard : null,
       builder: (context, card) {
         return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 320),
+          duration: const Duration(milliseconds: 300),
           switchInCurve: Curves.easeOut,
           switchOutCurve: Curves.easeIn,
-          transitionBuilder: (child, animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.05),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
-              ),
-            );
-          },
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.04),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          ),
           child: card == null
               ? const SizedBox.shrink()
               : _CardInfoContent(key: ValueKey(card.id), card: card),
@@ -46,6 +44,8 @@ class CardInfoPanel extends StatelessWidget {
   }
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+
 class _CardInfoContent extends StatelessWidget {
   const _CardInfoContent({super.key, required this.card});
 
@@ -54,264 +54,81 @@ class _CardInfoContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Card name
+          Text(
+            'The RBL ${card.name} Credit Card',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                ),
+          ),
+          const SizedBox(height: 10),
+
+          // Brand logos row
+          Row(
+            children: [
+              _RblBankBadge(),
+              const SizedBox(width: 10),
+              _VisaBadge(),
+            ],
+          ),
           const SizedBox(height: 20),
-          _StatusRow(billInfo: card.billInfo),
-          const SizedBox(height: 14),
-          _BillInfoCard(billInfo: card.billInfo),
-          const SizedBox(height: 14),
-          if (card.billInfo.promoText != null)
-            _PromoBanner(
-              promoText: card.billInfo.promoText!,
-              cardName: card.name,
-            ),
+
+          // Fee stats row
+          _FeeStatsRow(card: card),
         ],
       ),
     );
   }
 }
 
-// ── Status Row ───────────────────────────────────────────────────────────────
+// ── RBL Bank badge ────────────────────────────────────────────────────────────
 
-class _StatusRow extends StatelessWidget {
-  const _StatusRow({required this.billInfo});
-
-  final CardBillInfo billInfo;
-
-  Color get _dotColor => switch (billInfo.status) {
-        BillStatus.paid => AppColors.accentGreen,
-        BillStatus.overdue => AppColors.accentRed,
-        BillStatus.upcoming => AppColors.accentAmber,
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: _dotColor,
-            boxShadow: [
-              BoxShadow(
-                color: _dotColor.withValues(alpha: 0.6),
-                blurRadius: 6,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          billInfo.statusLabel,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: _dotColor,
-            letterSpacing: 1.2,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Bill Info Card ───────────────────────────────────────────────────────────
-
-class _BillInfoCard extends StatelessWidget {
-  const _BillInfoCard({required this.billInfo});
-
-  final CardBillInfo billInfo;
-
+class _RblBankBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: switch (billInfo.status) {
-        BillStatus.paid => _PaidContent(billInfo: billInfo),
-        BillStatus.upcoming => _UpcomingContent(billInfo: billInfo),
-        BillStatus.overdue => _OverdueContent(billInfo: billInfo),
-      },
-    );
-  }
-}
-
-class _PaidContent extends StatelessWidget {
-  const _PaidContent({required this.billInfo});
-
-  final CardBillInfo billInfo;
-
-  @override
-  Widget build(BuildContext context) {
-    final next = billInfo.nextBillDate;
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                next != null
-                    ? 'Next bill expected on ${_formatDate(next)}'
-                    : 'No upcoming bill',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'You\'re all caught up!',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        OutlinedButton(
-          onPressed: () {},
-          child: const Text('Pay early'),
-        ),
-      ],
-    );
-  }
-}
-
-class _UpcomingContent extends StatelessWidget {
-  const _UpcomingContent({required this.billInfo});
-
-  final CardBillInfo billInfo;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                billInfo.nextBillDate != null
-                    ? 'Bill due on ${_formatDate(billInfo.nextBillDate!)}'
-                    : 'Upcoming bill',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                billInfo.amountDue != null
-                    ? CurrencyFormatter.format(billInfo.amountDue!)
-                    : 'Amount pending',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        OutlinedButton(
-          onPressed: () {},
-          child: const Text('Pay early'),
-        ),
-      ],
-    );
-  }
-}
-
-class _OverdueContent extends StatelessWidget {
-  const _OverdueContent({required this.billInfo});
-
-  final CardBillInfo billInfo;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (billInfo.overdueDays != null)
-                Text(
-                  'Overdue by ${billInfo.overdueDays} day${billInfo.overdueDays! > 1 ? 's' : ''}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.accentRed,
-                      ),
-                ),
-              const SizedBox(height: 4),
-              Text(
-                billInfo.totalDue != null
-                    ? 'Total due ${CurrencyFormatter.format(billInfo.totalDue!)}'
-                    : 'Payment overdue',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        ElevatedButton(
-          onPressed: () {},
-          child: const Text('Pay now'),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Promo Banner ─────────────────────────────────────────────────────────────
-
-class _PromoBanner extends StatelessWidget {
-  const _PromoBanner({required this.promoText, required this.cardName});
-
-  final String promoText;
-  final String cardName;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppColors.divider),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Text(
-              promoText,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                    height: 1.5,
-                  ),
-            ),
-          ),
-          const SizedBox(width: 16),
+          // "b" symbol styled like RBL's brand mark
           Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceElevated,
+            width: 16,
+            height: 16,
+            decoration: const BoxDecoration(
+              color: AppColors.cardGoldPrimary,
               shape: BoxShape.circle,
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/Frame 2147225164.png',
-                fit: BoxFit.contain,
-                cacheWidth: 120,
+            child: const Center(
+              child: Text(
+                'b',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                ),
               ),
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            'RBL Bank',
+            style: GoogleFonts.inter(
+              color: AppColors.textPrimary,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -320,12 +137,122 @@ class _PromoBanner extends StatelessWidget {
   }
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Visa badge ────────────────────────────────────────────────────────────────
 
-String _formatDate(DateTime date) {
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
-  return '${date.day} ${months[date.month - 1]}';
+class _VisaBadge extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Text(
+        'VISA',
+        style: GoogleFonts.inter(
+          color: const Color(0xFF1A1F71),
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.5,
+          shadows: const [
+            Shadow(
+              color: Color(0xFF1A1F71),
+              blurRadius: 0,
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Fee stats row ─────────────────────────────────────────────────────────────
+
+class _FeeStatsRow extends StatelessWidget {
+  const _FeeStatsRow({required this.card});
+
+  final CreditCard card;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            _FeeStat(
+              value: '₹${card.annualFee.toInt()}',
+              label: 'Annual Fee',
+            ),
+            const VerticalDivider(
+              color: AppColors.divider,
+              width: 1,
+              thickness: 1,
+              indent: 14,
+              endIndent: 14,
+            ),
+            _FeeStat(
+              value: '₹${card.joiningFee.toInt()}',
+              label: 'Joining Fee',
+            ),
+            const VerticalDivider(
+              color: AppColors.divider,
+              width: 1,
+              thickness: 1,
+              indent: 14,
+              endIndent: 14,
+            ),
+            _FeeStat(
+              value: '₹${card.hiddenCharges.toInt()}',
+              label: 'Hidden Charges',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeeStat extends StatelessWidget {
+  const _FeeStat({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Column(
+          children: [
+            Text(
+              value,
+              style: GoogleFonts.inter(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

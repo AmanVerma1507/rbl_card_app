@@ -1,28 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../bloc/card_carousel_bloc.dart';
 import '../bloc/card_carousel_event.dart';
 import '../bloc/card_carousel_state.dart';
 import '../widgets/card_carousel.dart';
+import '../widgets/card_dot_indicator.dart';
 import '../widgets/card_info_panel.dart';
-import '../widgets/card_thumbnail_strip.dart';
+import '../widgets/cashback_benefits_section.dart';
+import '../widgets/get_card_cta_button.dart';
 import '../widgets/offers_section.dart';
-import '../widgets/scroll_reveal_card.dart';
-import '../widgets/sticky_bill_bar.dart';
 
-/// Root page for the RBL Card Home screen.
+/// Root page for the RBL Card Home (Card Offers) screen.
 ///
-/// Layout (top → bottom):
-/// 1. App bar (back arrow + "More actions" button)
-/// 2. Card carousel (hero element with parallax)
-/// 3. Dynamic content panel (bill status + info + promo)
-/// 4. Scroll-reveal analytics card
-/// 5. Offers section
-/// Overlay (always on top):
-/// 6. Sticky bill bar + thumbnail strip (pinned to bottom)
+/// Layout (top → bottom, scrollable):
+/// 1. App bar  — "Credit Card Offers" title + back arrow
+/// 2. Card carousel — parallax PageView
+/// 3. Dot indicators — animated pill dots
+/// 4. Card details   — name, RBL + VISA logos, ₹0 fee stats
+/// 5. Cashback benefits — 3 benefit rows (per selected card)
+/// 6. Brand Offers   — horizontal scrollable large image cards
+/// 7. Selected Offers — 2-column offer grid
+///
+/// Sticky overlay (always visible):
+/// 8. "Get Your Card" amber/gold CTA button
 class CardHomePage extends StatefulWidget {
   const CardHomePage({super.key});
 
@@ -32,15 +34,6 @@ class CardHomePage extends StatefulWidget {
 
 class _CardHomePageState extends State<CardHomePage> {
   final ScrollController _scrollController = ScrollController();
-  double _scrollOffset = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(() {
-      setState(() => _scrollOffset = _scrollController.offset);
-    });
-  }
 
   @override
   void dispose() {
@@ -57,24 +50,15 @@ class _CardHomePageState extends State<CardHomePage> {
         extendBody: true,
         body: Stack(
           children: [
-            // ── Scrollable body ──────────────────────────────────
-            _ScrollBody(
-              scrollController: _scrollController,
-              scrollOffset: _scrollOffset,
-            ),
+            // ── Scrollable content ───────────────────────────────
+            _ScrollBody(scrollController: _scrollController),
 
-            // ── Sticky bottom overlay ────────────────────────────
-            Positioned(
+            // ── Sticky CTA at bottom ─────────────────────────────
+            const Positioned(
               bottom: 0,
               left: 0,
               right: 0,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  CardThumbnailStrip(),
-                  StickyBillBar(),
-                ],
-              ),
+              child: GetCardCtaButton(),
             ),
           ],
         ),
@@ -88,17 +72,12 @@ class _CardHomePageState extends State<CardHomePage> {
 // ────────────────────────────────────────────────────────────────────────────
 
 class _ScrollBody extends StatelessWidget {
-  const _ScrollBody({
-    required this.scrollController,
-    required this.scrollOffset,
-  });
+  const _ScrollBody({required this.scrollController});
 
   final ScrollController scrollController;
-  final double scrollOffset;
 
   @override
   Widget build(BuildContext context) {
-    // Bottom padding to clear the sticky bar + thumbnail strip (~140px).
     return BlocBuilder<CardCarouselBloc, CardCarouselState>(
       buildWhen: (prev, curr) =>
           (prev is CardCarouselLoading && curr is CardCarouselLoaded) ||
@@ -108,17 +87,18 @@ class _ScrollBody extends StatelessWidget {
           controller: scrollController,
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // App bar
+            // ── App bar ──────────────────────────────────────────
             SliverAppBar(
               pinned: false,
               floating: true,
               backgroundColor: AppColors.background,
               leading: const _BackButton(),
-              actions: const [_MoreActionsButton()],
+              title: const _AppBarTitle(),
+              centerTitle: true,
               titleSpacing: 0,
             ),
 
-            // Loading / error states
+            // ── Loading / Error ──────────────────────────────────
             if (state is CardCarouselLoading)
               const SliverFillRemaining(
                 hasScrollBody: false,
@@ -130,27 +110,23 @@ class _ScrollBody extends StatelessWidget {
                 child: _ErrorView(message: state.message),
               )
             else ...[
-              // Card carousel
+              // ── Card carousel ────────────────────────────────
               const SliverToBoxAdapter(child: CardCarouselConnected()),
 
-              // Dynamic card info panel
+              // ── Dot indicators ───────────────────────────────
+              const SliverToBoxAdapter(child: CardDotIndicator()),
+
+              // ── Card name + logos + fee stats ────────────────
               const SliverToBoxAdapter(child: CardInfoPanel()),
 
-              // Scroll-reveal analytics card
-              SliverToBoxAdapter(
-                child: ScrollRevealCard(
-                  scrollOffset: scrollOffset,
-                  revealAt: 120,
-                ),
-              ),
+              // ── Cashback benefit rows ────────────────────────
+              const SliverToBoxAdapter(child: CashbackBenefitsSection()),
 
-              // Offers section
+              // ── Brand Offers + Selected Offers ───────────────
               const SliverToBoxAdapter(child: OffersSection()),
 
-              // Bottom padding to clear sticky bar (~160px)
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 160),
-              ),
+              // ── Bottom padding to clear CTA button ──────────
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           ],
         );
@@ -163,6 +139,22 @@ class _ScrollBody extends StatelessWidget {
 // App bar components
 // ────────────────────────────────────────────────────────────────────────────
 
+class _AppBarTitle extends StatelessWidget {
+  const _AppBarTitle();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Text(
+      'Credit Card Offers',
+      style: TextStyle(
+        color: AppColors.textPrimary,
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+}
+
 class _BackButton extends StatelessWidget {
   const _BackButton();
 
@@ -172,31 +164,6 @@ class _BackButton extends StatelessWidget {
       onPressed: () => Navigator.maybePop(context),
       icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
       color: AppColors.textPrimary,
-    );
-  }
-}
-
-class _MoreActionsButton extends StatelessWidget {
-  const _MoreActionsButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton.icon(
-      onPressed: () {},
-      style: TextButton.styleFrom(
-        foregroundColor: AppColors.textPrimary,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-      ),
-      label: Text(
-        'More actions',
-        style: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary,
-        ),
-      ),
-      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
-      iconAlignment: IconAlignment.end,
     );
   }
 }
@@ -219,7 +186,8 @@ class _LoadingView extends StatelessWidget {
             height: 32,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.cardGoldPrimary),
+              valueColor:
+                  AlwaysStoppedAnimation<Color>(AppColors.cardGoldPrimary),
             ),
           ),
           const SizedBox(height: 16),

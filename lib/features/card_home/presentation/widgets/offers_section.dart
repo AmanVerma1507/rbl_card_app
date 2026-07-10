@@ -1,176 +1,103 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 
-/// Offers section with:
-/// 1. Category icon row (grocery, travel, gym, spa, golf)
-/// 2. Cashback badge header tile
-/// 3. Brand logo strip (Netflix, Myntra, Amazon, Flipkart)
+// ── Mock offer data (static — same for all cards) ─────────────────────────────
+
+class _BrandOffer {
+  const _BrandOffer({
+    required this.brandName,
+    required this.imagePath,
+    required this.offerText,
+    required this.badgeColor,
+  });
+  final String brandName;
+  final String imagePath;
+  final String offerText;
+  final Color badgeColor;
+}
+
+const _brandOffers = [
+  _BrandOffer(
+    brandName: 'ixigo',
+    imagePath: 'assets/IMG_3889 2.png',
+    offerText:
+        'Get 8% off on flight bookings, with a max discount of up to ₹1000',
+    badgeColor: Color(0xFFFF6B35),
+  ),
+  _BrandOffer(
+    brandName: 'FitLife',
+    imagePath: 'assets/IMG_3902 1.png',
+    offerText: 'Get 3 months complimentary gym membership at select outlets',
+    badgeColor: Color(0xFF6366F1),
+  ),
+];
+
+class _SelectedOffer {
+  const _SelectedOffer({
+    required this.title,
+    required this.imagePath,
+    required this.description,
+  });
+  final String title;
+  final String imagePath;
+  final String description;
+}
+
+const _selectedOffers = [
+  _SelectedOffer(
+    title: 'Golf Program',
+    imagePath: 'assets/IMG_3905 2.png',
+    description: 'Enjoy complimentary golf session every year',
+  ),
+  _SelectedOffer(
+    title: 'Spa Services',
+    imagePath: 'assets/IMG_3904 2.png',
+    description: 'Premium spa access at 5-star hotel properties',
+  ),
+];
+
+// ── Main widget ───────────────────────────────────────────────────────────────
+
+/// Offers section showing:
+/// 1. "Brand Offers and Benefits" — horizontal scrollable large image cards
+/// 2. "Selected Offers"           — 2-column image grid
 class OffersSection extends StatelessWidget {
   const OffersSection({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 28),
-          _SectionHeader(
-            badgeAsset: 'assets/Frame 2147225164.png',
-            title: 'Offers & Rewards',
-            subtitle: 'Exclusive deals for your cards',
-          ),
-          const SizedBox(height: 20),
-          _CategoryRow(),
-          const SizedBox(height: 24),
-          _BrandLogosCard(),
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Section header ────────────────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.badgeAsset,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String badgeAsset;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceElevated,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.asset(
-              badgeAsset,
-              fit: BoxFit.contain,
-              cacheWidth: 88,
-            ),
-          ),
-        ),
-        const SizedBox(width: 14),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        SizedBox(height: 28),
+        _BrandOffersSection(),
+        SizedBox(height: 28),
+        _SelectedOffersSection(),
       ],
     );
   }
 }
 
-// ── Category row ─────────────────────────────────────────────────────────────
+// ── Brand Offers horizontal scroll ───────────────────────────────────────────
 
-const _categories = [
-  _CategoryData('Grocery', 'assets/Group 2147225137.png'),
-  _CategoryData('Travel', 'assets/IMG_3889 2.png'),
-  _CategoryData('Gym', 'assets/IMG_3902 1.png'),
-  _CategoryData('Spa', 'assets/IMG_3904 2.png'),
-  _CategoryData('Golf', 'assets/IMG_3905 2.png'),
-];
-
-class _CategoryData {
-  const _CategoryData(this.label, this.assetPath);
-  final String label;
-  final String assetPath;
-}
-
-class _CategoryRow extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: _categories
-          .map((cat) => _CategoryTile(data: cat))
-          .toList(growable: false),
-    );
-  }
-}
-
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({required this.data});
-
-  final _CategoryData data;
+class _BrandOffersSection extends StatelessWidget {
+  const _BrandOffersSection();
 
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 58,
-          height: 58,
-          decoration: BoxDecoration(
-            color: AppColors.categoryTileBg,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.divider),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(13),
-            child: Image.asset(
-              data.assetPath,
-              fit: BoxFit.cover,
-              cacheWidth: 116,
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          data.label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w500,
-              ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Brand logos card ──────────────────────────────────────────────────────────
-
-class _BrandLogosCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Top brands',
+                'Brand Offers and Benefits',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
               Text(
@@ -182,13 +109,216 @@ class _BrandLogosCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 190,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: _brandOffers.length,
+            itemBuilder: (context, i) => _BrandOfferCard(offer: _brandOffers[i]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BrandOfferCard extends StatelessWidget {
+  const _BrandOfferCard({required this.offer});
+
+  final _BrandOffer offer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 240,
+      margin: const EdgeInsets.only(right: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.divider),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Stack(
+        children: [
+          // Background image
+          Positioned.fill(
             child: Image.asset(
-              'assets/Frame 2147225165.png',
-              fit: BoxFit.contain,
-              cacheWidth: 700,
+              offer.imagePath,
+              fit: BoxFit.cover,
+              cacheWidth: 480,
+            ),
+          ),
+          // Dark gradient overlay
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.75),
+                  ],
+                  stops: const [0.4, 1.0],
+                ),
+              ),
+            ),
+          ),
+          // Brand badge + offer text
+          Positioned(
+            left: 14,
+            right: 14,
+            bottom: 14,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Brand badge
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: offer.badgeColor,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    offer.brandName,
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  offer.offerText,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    height: 1.4,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Selected Offers 2-column grid ────────────────────────────────────────────
+
+class _SelectedOffersSection extends StatelessWidget {
+  const _SelectedOffersSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Selected Offers',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              Text(
+                'See all',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.accentBlue,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // 2-column grid
+          Row(
+            children: _selectedOffers
+                .map(
+                  (offer) => Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        right: offer == _selectedOffers.first ? 7 : 0,
+                        left: offer == _selectedOffers.last ? 7 : 0,
+                      ),
+                      child: _SelectedOfferTile(offer: offer),
+                    ),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SelectedOfferTile extends StatelessWidget {
+  const _SelectedOfferTile({required this.offer});
+
+  final _SelectedOffer offer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.divider),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image
+          AspectRatio(
+            aspectRatio: 1.6,
+            child: Image.asset(
+              offer.imagePath,
+              fit: BoxFit.cover,
+              cacheWidth: 400,
+            ),
+          ),
+          // Text content
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  offer.title,
+                  style: GoogleFonts.inter(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  offer.description,
+                  style: GoogleFonts.inter(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                    height: 1.4,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],
