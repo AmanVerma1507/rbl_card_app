@@ -315,9 +315,10 @@ class CardHeaderDelegate extends SliverPersistentHeaderDelegate {
 // ────────────────────────────────────────────────────────────────────────────
 
 class _BowlNotchClipper extends CustomClipper<Path> {
-  const _BowlNotchClipper({required this.notchDepth});
+  const _BowlNotchClipper({required this.notchDepth, this.cornerRadius = 24});
 
   final double notchDepth;
+  final double cornerRadius; // ← NEW
 
   static const double _notchHalfWidth = 20.0;
 
@@ -327,19 +328,24 @@ class _BowlNotchClipper extends CustomClipper<Path> {
     final h = size.height;
     final cx = w / 2;
     final d = notchDepth;
+    final r = cornerRadius;
 
     final path = Path()
-      ..moveTo(0, 0)
+      ..moveTo(0, r)
+      // top-left rounded corner
+      ..arcToPoint(Offset(r, 0), radius: Radius.circular(r))
       ..lineTo(cx - _notchHalfWidth, 0)
       ..cubicTo(
-        cx - _notchHalfWidth * 0.3,
+        cx - _notchHalfWidth * 0.35,
         d,
-        cx + _notchHalfWidth * 0.4,
+        cx + _notchHalfWidth * 0.35,
         d,
         cx + _notchHalfWidth,
         0,
       )
-      ..lineTo(w, 0)
+      ..lineTo(w - r, 0)
+      // top-right rounded corner
+      ..arcToPoint(Offset(w, r), radius: Radius.circular(r))
       ..lineTo(w, h)
       ..lineTo(0, h)
       ..close();
@@ -348,5 +354,6 @@ class _BowlNotchClipper extends CustomClipper<Path> {
   }
 
   @override
-  bool shouldReclip(_BowlNotchClipper old) => old.notchDepth != notchDepth;
+  bool shouldReclip(_BowlNotchClipper old) =>
+      old.notchDepth != notchDepth || old.cornerRadius != cornerRadius;
 }
