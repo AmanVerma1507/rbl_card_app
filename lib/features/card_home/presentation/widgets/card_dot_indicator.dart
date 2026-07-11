@@ -13,8 +13,11 @@ class CardDotIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<CardCarouselBloc, CardCarouselState,
-        ({int totalCount, int selectedIndex})>(
+    return BlocSelector<
+      CardCarouselBloc,
+      CardCarouselState,
+      ({int totalCount, int selectedIndex})
+    >(
       selector: (state) {
         if (state is CardCarouselLoaded) {
           // +1 for the "Add card" slot
@@ -29,7 +32,7 @@ class CardDotIndicator extends StatelessWidget {
         if (data.totalCount == 0) return const SizedBox.shrink();
 
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.only(top: 25),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(data.totalCount, (i) {
