@@ -236,7 +236,7 @@ class _FeeStat extends StatelessWidget {
             Text(
               value,
               style: GoogleFonts.inter(
-                color: AppColors.cardGoldSecondary.withOpacity(0.8),
+                color: AppColors.cardGoldSecondary.withValues(alpha: 0.8),
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
@@ -245,7 +245,7 @@ class _FeeStat extends StatelessWidget {
             Text(
               label,
               style: GoogleFonts.inter(
-                color: AppColors.textPrimary.withOpacity(0.9),
+                color: AppColors.textPrimary.withValues(alpha: 0.9),
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),

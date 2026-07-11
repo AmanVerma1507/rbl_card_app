@@ -57,7 +57,10 @@ class _CardCarouselState extends State<CardCarousel> {
         // rebuilds from pageController. Per-item scale/opacity animation
         // is handled inside _buildCardItem instead.
         child: PageView.builder(
-          controller: PageController(viewportFraction: 0.65),
+          // ← must use widget.pageController so AnimatedBuilder below
+          //   can read widget.pageController.page and compute scale/opacity.
+          //   Using a separate controller breaks the animation entirely.
+          controller: widget.pageController,
           itemCount: _itemCount,
           onPageChanged: (index) {
             if (index < widget.cards.length) {
@@ -81,6 +84,8 @@ class _CardCarouselState extends State<CardCarousel> {
             : widget.initialIndex.toDouble();
 
         final double delta = (pageValue - index).abs().clamp(0.0, 1.0);
+        // delta=0 → selected card (center)  → scale=1.0, opacity=1.0
+        // delta=1 → adjacent peek card       → scale=0.87, opacity=0.55
         final double scale = lerpDouble(1.0, 0.87, delta)!;
         final double opacity = lerpDouble(1.0, 0.55, delta)!;
 
@@ -101,16 +106,12 @@ class _CardCarouselState extends State<CardCarousel> {
 
     final card = widget.cards[index];
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: AspectRatio(
           aspectRatio: 1 / 1.586, // Physical credit card ratio (portrait)
-          child: Image.asset(
-            card.assetPath,
-            fit: BoxFit.cover,
-            cacheWidth: 600,
-          ),
+          child: Image.asset(card.assetPath, fit: BoxFit.cover),
         ),
       ),
     );
@@ -118,8 +119,9 @@ class _CardCarouselState extends State<CardCarousel> {
 
   double _cardHeight(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
-    // Card width is viewport fraction of screen; height = width * 1.586
-    final cardWidth = screenWidth * 0.6 - 16; // minus horizontal padding
+    // viewportFraction = 0.60 → center card occupies 60% of screen
+    // padding is 12 on each side (24 total) → subtract from slot width
+    final cardWidth = screenWidth * 0.60 - 24;
     return cardWidth * 1.586;
   }
 }
@@ -236,7 +238,8 @@ class _CardCarouselConnectedState extends State<CardCarouselConnected> {
         if (_controller == null) {
           _controller = PageController(
             initialPage: state.selectedIndex,
-            viewportFraction: 0.82,
+            // 0.60 → center card = 60% of screen, left/right peek = 20% each
+            viewportFraction: 0.65,
           );
           _lastSelectedIndex = state.selectedIndex;
         }

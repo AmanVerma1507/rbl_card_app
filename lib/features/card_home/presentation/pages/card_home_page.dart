@@ -109,10 +109,10 @@ class _ScrollBody extends StatelessWidget {
             // RepaintBoundary isolates the carousel's own internal
             // horizontal-swipe animation from repainting the rest of the
             // scroll view on every frame.
-            const SliverToBoxAdapter(
-              child: RepaintBoundary(child: CardCarouselConnected()),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: CardHeaderDelegate(),
             ),
-
             // ── Dot page indicators ──────────────────────────────
             const SliverToBoxAdapter(child: CardDotIndicator()),
 
@@ -230,5 +230,55 @@ class _ErrorView extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class CardHeaderDelegate extends SliverPersistentHeaderDelegate {
+  @override
+  double get maxExtent => 430; // full card area
+
+  @override
+  double get minExtent => 200; // half card always remains
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final progress = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 0.8);
+
+    return Container(
+      color: AppColors.background,
+
+      child: Stack(
+        clipBehavior: Clip.hardEdge,
+
+        alignment: Alignment.topCenter,
+
+        children: [
+          Positioned(
+            top: 0,
+
+            left: 0,
+            right: 0,
+
+            child: Transform.scale(
+              alignment: Alignment.topCenter,
+
+              // little zoom like video
+              scale: 1 + (progress * .3),
+
+              child: const CardCarouselConnected(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
+    return true;
   }
 }
